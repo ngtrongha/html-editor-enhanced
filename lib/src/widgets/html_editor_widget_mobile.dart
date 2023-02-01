@@ -106,13 +106,15 @@ class _HtmlEditorWidgetMobileState extends State<HtmlEditorWidget> {
       child: VisibilityDetector(
         key: Key(key),
         onVisibilityChanged: (VisibilityInfo info) async {
-          if (!visibleStream.isClosed) {
-            cachedVisibleDecimal = info.visibleFraction == 1
-                ? (info.size.height / widget.otherOptions.height).clamp(0, 1)
-                : info.visibleFraction;
-            visibleStream.add(info.visibleFraction == 1
-                ? (info.size.height / widget.otherOptions.height).clamp(0, 1)
-                : info.visibleFraction);
+          if (!widget.htmlEditorOptions.offAutoFocus) {
+            if (!visibleStream.isClosed) {
+              cachedVisibleDecimal = info.visibleFraction == 1
+                  ? (info.size.height / widget.otherOptions.height).clamp(0, 1)
+                  : info.visibleFraction;
+              visibleStream.add(info.visibleFraction == 1
+                  ? (info.size.height / widget.otherOptions.height).clamp(0, 1)
+                  : info.visibleFraction);
+            }
           }
         },
         child: Container(
