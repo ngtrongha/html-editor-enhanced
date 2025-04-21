@@ -91,6 +91,84 @@ class ToolbarWidgetState extends State<ToolbarWidget> {
   /// Tracks the expanded status of the toolbar
   bool _isExpanded = false;
 
+  /// ScrollController for the toolbar when in scrollable mode
+  ScrollController? _scrollController;
+
+  /// List of custom fonts that can be added to the font dropdown
+  List<Map<String, String>> _customFonts = [
+    {'fontName': 'Courier New', 'fontFamily': 'Courier New'},
+    {'fontName': 'Sans Serif', 'fontFamily': 'sans-serif'},
+    {'fontName': 'Times New Roman', 'fontFamily': 'Times New Roman'}
+  ];
+
+  /// Adds a custom font to the font dropdown
+  /// [fontName] is the name to display in the dropdown
+  /// [fontFamily] is the CSS font-family value to apply
+  /// Note: This implementation only supports Google Fonts. The font family name provided
+  /// should match a valid Google Font name that can be loaded via the Google Fonts API.
+  /// You can find available Google Fonts at https://fonts.google.com/
+  /// For custom or local fonts, additional implementation would be required to load the font files.
+  void addCustomFont(String fontName, String fontFamily) {
+    if (!_customFonts.any((font) => font['fontName'] == fontName)) {
+      setState(mounted, this.setState, () {
+        _customFonts.add({
+          'fontName': fontName,
+          'fontFamily': fontFamily,
+        });
+      });
+
+      // Add font to the editor's document to make it available
+      _injectFontToEditor(fontName, fontFamily);
+    } else {
+      print('Font $fontName already exists in the custom fonts list.');
+    }
+  }
+
+  /// Injects the font CSS into the editor to make it available
+  void _injectFontToEditor(String fontName, String fontFamily) {
+    if (kIsWeb) {
+      // For web, add a stylesheet link
+      widget.controller.execCommand('insertCSS',
+          argument:
+              "@import url('https://fonts.googleapis.com/css?family=$fontFamily&display=swap');");
+    } else {
+      // For mobile, inject the CSS into the editor's head
+      widget.controller.editorController?.evaluateJavascript(source: """
+          // Add Google Fonts stylesheet
+          var link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = 'https://fonts.googleapis.com/css?family=$fontFamily&display=swap';
+          document.head.appendChild(link);
+          
+          // Add custom font style rule
+          var style = document.createElement('style');
+          style.textContent = ".note-editable .font-$fontFamily { font-family: '$fontFamily', sans-serif !important; }";
+          document.head.appendChild(style);
+          
+          // Update Summernote's font list
+          var fontList = \$('#summernote-2').summernote('options').fontNames;
+          if(!fontList.includes('$fontName')) {
+            fontList.push('$fontName');
+            \$('#summernote-2').summernote('options').fontNames = fontList;
+          }
+        """);
+    }
+  }
+
+  /// Removes a custom font from the font dropdown
+  void removeCustomFont(String fontName) {
+    setState(mounted, this.setState, () {
+      _customFonts.removeWhere((font) => font['fontName'] == fontName);
+    });
+  }
+
+  /// Removes all custom fonts from the font dropdown
+  void clearCustomFonts() {
+    setState(mounted, this.setState, () {
+      _customFonts.clear();
+    });
+  }
+
   @override
   void initState() {
     widget.controller.toolbar = this;
@@ -113,7 +191,17 @@ class ToolbarWidgetState extends State<ToolbarWidget> {
         _alignSelected = List<bool>.filled(t.getIcons1().length, false);
       }
     }
+    if (widget.htmlToolbarOptions.toolbarType == ToolbarType.nativeScrollable ||
+        widget.htmlToolbarOptions.toolbarType == ToolbarType.nativeExpandable) {
+      _scrollController = ScrollController();
+    }
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    _scrollController?.dispose();
+    super.dispose();
   }
 
   void disable() {
@@ -164,16 +252,26 @@ class ToolbarWidgetState extends State<ToolbarWidget> {
         _fontSelectedItem = 'p';
       });
     }
-    //check the font name if it matches one of the predetermined fonts and update the toolbar
-    if (['Courier New', 'sans-serif', 'Times New Roman'].contains(fontName)) {
-      setState(mounted, this.setState, () {
-        _fontNameSelectedItem = fontName;
-      });
-    } else {
+    //check the font name if it matches one of the predetermined fonts or custom fonts and update the toolbar
+    bool isCustomFont = false;
+    // Check if it's one of our custom fonts
+    for (var font in _customFonts) {
+      if (font['fontFamily'] == fontName) {
+        setState(mounted, this.setState, () {
+          _fontNameSelectedItem = fontName;
+          isCustomFont = true;
+        });
+        break;
+      }
+    }
+
+    // If it's not a custom font and not a default font, set to default
+    if (!isCustomFont) {
       setState(mounted, this.setState, () {
         _fontNameSelectedItem = 'sans-serif';
       });
     }
+
     //update the fore/back selected color if necessary
     if (colorList[0] != null && colorList[0]!.isNotEmpty) {
       setState(mounted, this.setState, () {
@@ -357,17 +455,21 @@ class ToolbarWidgetState extends State<ToolbarWidget> {
               height: widget.htmlToolbarOptions.toolbarItemHeight + 15,
               child: Padding(
                 padding: const EdgeInsets.all(5.0),
-                child: CustomScrollView(
-                  scrollDirection: Axis.horizontal,
-                  slivers: [
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: _buildChildren(),
+                child: Scrollbar(
+                  controller: _scrollController,
+                  child: CustomScrollView(
+                    controller: _scrollController,
+                    scrollDirection: Axis.horizontal,
+                    slivers: [
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: _buildChildren(),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -429,37 +531,43 @@ class ToolbarWidgetState extends State<ToolbarWidget> {
                     )
                   : Padding(
                       padding: const EdgeInsets.all(5.0),
-                      child: CustomScrollView(
-                        scrollDirection: Axis.horizontal,
-                        shrinkWrap: true,
-                        slivers: [
-                          SliverPersistentHeader(
-                            pinned: true,
-                            delegate: ExpandIconDelegate(
-                                widget.htmlToolbarOptions.toolbarItemHeight,
-                                _isExpanded, () async {
-                              setState(mounted, this.setState, () {
-                                _isExpanded = !_isExpanded;
-                              });
-                              await Future.delayed(Duration(milliseconds: 100));
-                              if (kIsWeb) {
-                                widget.controller.recalculateHeight();
-                              } else {
-                                await widget.controller.editorController!
-                                    .evaluateJavascript(
-                                        source:
-                                            "var height = \$('div.note-editable').outerHeight(true); window.flutter_inappwebview.callHandler('setHeight', height);");
-                              }
-                            }),
-                          ),
-                          SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: _buildChildren(),
+                      child: Scrollbar(
+                        controller: _scrollController,
+                        child: CustomScrollView(
+                          controller: _scrollController,
+                          scrollDirection: Axis.horizontal,
+                          shrinkWrap: true,
+                          slivers: [
+                            SliverPersistentHeader(
+                              pinned: true,
+                              delegate: ExpandIconDelegate(
+                                  widget.htmlToolbarOptions.toolbarItemHeight,
+                                  _isExpanded, () async {
+                                setState(mounted, this.setState, () {
+                                  _isExpanded = !_isExpanded;
+                                });
+                                await Future.delayed(
+                                    Duration(milliseconds: 100));
+                                if (kIsWeb) {
+                                  widget.controller.recalculateHeight();
+                                } else {
+                                  await widget.controller.editorController!
+                                      .evaluateJavascript(
+                                          source:
+                                              "var height = \$('div.note-editable').outerHeight(true); window.flutter_inappwebview.callHandler('setHeight', height);");
+                                }
+                              }),
                             ),
-                          ),
-                        ],
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: _buildChildren(),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
             ),
@@ -639,26 +747,15 @@ class ToolbarWidgetState extends State<ToolbarWidget> {
                     widget.htmlToolbarOptions.dropdownMenuMaxHeight ??
                         MediaQuery.of(context).size.height / 3,
                 style: widget.htmlToolbarOptions.textStyle,
-                items: [
-                  CustomDropdownMenuItem(
-                    value: 'Courier New',
-                    child: PointerInterceptor(
-                        child: Text('Courier New',
-                            style: TextStyle(fontFamily: 'Courier'))),
-                  ),
-                  CustomDropdownMenuItem(
-                    value: 'sans-serif',
-                    child: PointerInterceptor(
-                        child: Text('Sans Serif',
-                            style: TextStyle(fontFamily: 'sans-serif'))),
-                  ),
-                  CustomDropdownMenuItem(
-                    value: 'Times New Roman',
-                    child: PointerInterceptor(
-                        child: Text('Times New Roman',
-                            style: TextStyle(fontFamily: 'Times'))),
-                  ),
-                ],
+                items: _customFonts
+                    .map((font) => CustomDropdownMenuItem(
+                          value: font['fontFamily']!,
+                          child: PointerInterceptor(
+                              child: Text(font['fontName']!,
+                                  style: TextStyle(
+                                      fontFamily: font['fontFamily']))),
+                        ))
+                    .toList(),
                 value: _fontNameSelectedItem,
                 onChanged: (String? changed) async {
                   void updateSelectedItem(dynamic changed) async {
@@ -1065,7 +1162,7 @@ class ToolbarWidgetState extends State<ToolbarWidget> {
                     true;
                 if (proceed) {
                   widget.controller.execCommand('foreColor',
-                      argument: (Colors.black.toARGB32() & 0xFFFFFF)
+                      argument: (Colors.black.value & 0xFFFFFF)
                           .toRadixString(16)
                           .padLeft(6, '0')
                           .toUpperCase());
@@ -1079,7 +1176,7 @@ class ToolbarWidgetState extends State<ToolbarWidget> {
                     true;
                 if (proceed) {
                   widget.controller.execCommand('hiliteColor',
-                      argument: (Colors.yellow.toARGB32() & 0xFFFFFF)
+                      argument: (Colors.yellow.value & 0xFFFFFF)
                           .toRadixString(16)
                           .padLeft(6, '0')
                           .toUpperCase());
@@ -1181,7 +1278,7 @@ class ToolbarWidgetState extends State<ToolbarWidget> {
                                 if (t.getIcons()[index].icon ==
                                     Icons.format_color_text) {
                                   widget.controller.execCommand('foreColor',
-                                      argument: (newColor.toARGB32() & 0xFFFFFF)
+                                      argument: (newColor.value & 0xFFFFFF)
                                           .toRadixString(16)
                                           .padLeft(6, '0')
                                           .toUpperCase());
@@ -1192,7 +1289,7 @@ class ToolbarWidgetState extends State<ToolbarWidget> {
                                 if (t.getIcons()[index].icon ==
                                     Icons.format_color_fill) {
                                   widget.controller.execCommand('hiliteColor',
-                                      argument: (newColor.toARGB32() & 0xFFFFFF)
+                                      argument: (newColor.value & 0xFFFFFF)
                                           .toRadixString(16)
                                           .padLeft(6, '0')
                                           .toUpperCase());

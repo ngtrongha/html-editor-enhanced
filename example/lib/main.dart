@@ -32,6 +32,12 @@ class _HtmlEditorExampleState extends State<HtmlEditorExample> {
   final HtmlEditorController controller = HtmlEditorController();
 
   @override
+  void initState() {
+    // The fonts will be added when the editor is initialized
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
@@ -84,8 +90,7 @@ class _HtmlEditorExampleState extends State<HtmlEditorExample> {
                   },
                   onDropdownChanged: (DropdownType type, dynamic changed,
                       Function(dynamic)? updateSelectedItem) {
-                    print(
-                        "dropdown '${type.name}' changed to $changed");
+                    print("dropdown '${type.name}' changed to $changed");
                     return true;
                   },
                   mediaLinkInsertInterceptor:
@@ -123,6 +128,10 @@ class _HtmlEditorExampleState extends State<HtmlEditorExample> {
                   print('codeview either focused or unfocused');
                 }, onInit: () {
                   print('init');
+                  // Add custom fonts after the editor has been initialized
+                  controller.addCustomFont('Roboto Slab', 'Roboto Slab');
+                  controller.addCustomFont('Montserrat', 'Montserrat');
+                  controller.addCustomFont('Pacifico', 'Pacifico');
                 },
                     //this is commented because it overrides the default Summernote handlers
                     /*onImageLinkInsert: (String? url) {

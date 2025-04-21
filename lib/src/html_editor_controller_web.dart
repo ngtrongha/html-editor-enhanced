@@ -326,4 +326,22 @@ class HtmlEditorController extends unsupported.HtmlEditorController {
           'Non-Flutter Web environment detected, please make sure you are importing package:html_editor_enhanced/html_editor.dart');
     }
   }
+
+  /// Adds a custom font to the font dropdown
+  ///
+  /// [fontName] is the name to display in the dropdown
+  /// [fontFamily] is the CSS font-family value to apply
+  void addCustomFont(String fontName, String fontFamily) {
+    toolbar?.addCustomFont(fontName, fontFamily);
+  }
+
+  /// Removes a custom font from the font dropdown
+  void removeCustomFont(String fontName) {
+    toolbar?.removeCustomFont(fontName);
+  }
+
+  /// Removes all custom fonts from the font dropdown
+  void clearCustomFonts() {
+    toolbar?.clearCustomFonts();
+  }
 }
