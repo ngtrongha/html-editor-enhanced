@@ -206,6 +206,13 @@ class _HtmlEditorWidgetWebState extends State<HtmlEditorWidget> {
     }
     var summernoteScripts = """
       <script type="text/javascript">
+        
+        if (${!widget.htmlEditorOptions.allowResizeEditor}) {
+          var style = document.createElement('style');
+          style.innerHTML = '.note-resizebar { display: none !important; }';
+          document.head.appendChild(style);
+        }
+        
         \$(document).ready(function () {
           \$('#summernote-2').summernote({
             placeholder: "${widget.htmlEditorOptions.hint}",
@@ -214,6 +221,7 @@ class _HtmlEditorWidgetWebState extends State<HtmlEditorWidget> {
             disableGrammar: false,
             spellCheck: ${widget.htmlEditorOptions.spellCheck},
             maximumFileSize: $maximumFileSize,
+            disableResizeEditor: ${!widget.htmlEditorOptions.allowResizeEditor},
             ${widget.htmlEditorOptions.customOptions}
             $summernoteCallbacks
           });

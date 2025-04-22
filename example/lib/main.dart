@@ -75,10 +75,11 @@ class _HtmlEditorExampleState extends State<HtmlEditorExample> {
               HtmlEditor(
                 controller: controller,
                 htmlEditorOptions: HtmlEditorOptions(
-                  hint: 'Your text here...',
-                  shouldEnsureVisible: true,
-                  //initialText: "<p>text content initial, if any</p>",
-                ),
+                    hint: 'Your text here...',
+                    shouldEnsureVisible: true,
+                    allowResizeEditor: false
+                    //initialText: "<p>text content initial, if any</p>",
+                    ),
                 htmlToolbarOptions: HtmlToolbarOptions(
                   toolbarPosition: ToolbarPosition.aboveEditor, //by default
                   toolbarType: ToolbarType.nativeScrollable, //by default

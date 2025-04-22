@@ -26,6 +26,7 @@ class HtmlEditorOptions {
     this.shouldEnsureVisible = false,
     this.spellCheck = false,
     this.offAutoFocus = false,
+    this.allowResizeEditor = true,
   });
   final bool offAutoFocus;
 
@@ -126,6 +127,9 @@ class HtmlEditorOptions {
   ///
   /// Default value is false.
   final bool spellCheck;
+
+  /// Cho phép bật/tắt resize editor. Mặc định: true (cho phép resize)
+  final bool allowResizeEditor;
 }
 
 /// Options that modify the toolbar and its behavior

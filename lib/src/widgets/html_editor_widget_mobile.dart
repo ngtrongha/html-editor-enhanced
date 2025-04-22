@@ -215,7 +215,9 @@ class _HtmlEditorWidgetMobileState extends State<HtmlEditorWidget> {
                         });
                         await setHeightJS();
                       }
-                      var visibleDecimal = await visibleStream.stream.firstWhere((_) => !visibleStream.isClosed, orElse: () => 0);
+                      var visibleDecimal = await visibleStream.stream
+                          .firstWhere((_) => !visibleStream.isClosed,
+                              orElse: () => 0);
                       var newHeight = widget.otherOptions.height;
                       if (visibleDecimal > 0.1) {
                         this.setState(() {
@@ -375,6 +377,7 @@ class _HtmlEditorWidgetMobileState extends State<HtmlEditorWidget> {
                               disableGrammar: false,
                               spellCheck: ${widget.htmlEditorOptions.spellCheck},
                               maximumFileSize: $maximumFileSize,
+                              disableResizeEditor: ${!widget.htmlEditorOptions.allowResizeEditor},
                               ${widget.htmlEditorOptions.customOptions}
                               $summernoteCallbacks
                           });
@@ -450,6 +453,13 @@ class _HtmlEditorWidgetMobileState extends State<HtmlEditorWidget> {
                       await controller.evaluateJavascript(
                           source:
                               "document.getElementsByClassName('note-editable')[0].setAttribute('inputmode', '${widget.htmlEditorOptions.inputType.name}');");
+                      await controller.evaluateJavascript(source: """
+                          if (${!widget.htmlEditorOptions.allowResizeEditor}) {
+                            var style = document.createElement('style');
+                            style.innerHTML = '.note-resizebar { display: none !important; }';
+                            document.head.appendChild(style);
+                          }
+                      """);
                       if ((Theme.of(context).brightness == Brightness.dark ||
                               widget.htmlEditorOptions.darkMode == true) &&
                           widget.htmlEditorOptions.darkMode != false) {
