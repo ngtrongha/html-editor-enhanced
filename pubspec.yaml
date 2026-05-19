@@ -21,7 +21,7 @@ dependencies:
   # plugin to show a color picker for foreground/highlight color
   flex_color_picker: ^3.7.0
   # plugin to get files from filesystem
-  file_picker: ^11.0.2
+  file_picker: ^12.0.0-beta.3
   # plugin to show a scrollable number picker for inserting tables
   numberpicker: ^2.1.2
   pointer_interceptor: ^0.10.1+2
